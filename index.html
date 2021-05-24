@@ -1,0 +1,444 @@
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="description" content="Tamilnadu Hospital beds availability status - COVID 19">
+        <meta name="author" content="Sai Ganapathy S">
+        <title>TN Hospital beds availability map</title>
+        <link href='https://api.mapbox.com/mapbox-gl-js/v2.2.0/mapbox-gl.css' rel='stylesheet' />
+        <script src='https://api.mapbox.com/mapbox-gl-js/v2.2.0/mapbox-gl.js'></script>
+        <script src='https://api.mapbox.com/mapbox.js/plugins/turf/v3.0.11/turf.min.js'></script>
+        <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
+        <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script> 
+        <script src="fetchHospitals.js"></script> 
+        <style>
+            body {
+              margin: 0;
+              padding: 0;
+            }
+
+            #map {
+              position: absolute;
+              top: 0;
+              bottom: 0;
+              width: 100%;
+            }
+            
+            .filterIcon{
+                position: absolute;
+                z-index: 99999;
+                top: 20px;
+                left: 10px;
+                height: 35px;
+                width: 35px;
+                cursor: pointer;
+              }
+              .filterIcon img{
+                height: 20px;
+                margin-top: 8px;
+                margin-left: 8px;
+              }
+            
+             .filterBy{
+                position: absolute;
+                z-index: 99999;
+                top: 80px;
+                left: 50px;
+                height: auto;
+                width: 250px;
+            }
+            
+            .toggle-checkbox:checked {
+              @apply: right-0 border-green-400;
+              right: 0;
+              border-color: #68D391;
+            }
+            .toggle-checkbox:checked + .toggle-label {
+              @apply: bg-green-400;
+              background-color: #68D391;
+            }
+            .lineRed:hover{
+              stroke:red;
+            }
+            .lineGreen:hover{
+              stroke:red;
+            }
+            
+            .hospitalInfo{
+                z-index: 999;
+                position: absolute;
+                top: 20px;
+                height: auto;
+                width: 300px;
+                right: 20px;
+                margin-bottom: 20px;
+                max-height: 90%;
+              }
+              .bedsInfo{
+                width:100%;
+              }
+              .bedsInfo tr{
+                margin-bottom: 15px;
+              }
+              .title{
+                position: absolute;
+                z-index: 999;
+                left: 10px;
+                bottom: 10px;
+              }
+        </style>
+        <script type="text/javascript" type="module">
+            window.filterData = {
+                oxygen_supported: true,
+                non_oxygen_supported: false,
+                icu_beds: false,
+                show_only_vacant: true
+            }
+            window.hospitalData = [];
+        </script>
+    </head>
+    
+    <body>
+        <div class="title shadow-md rounded bg-white p-2">TN Covid Beds Availability <a class="underline text-gray-500" href="tableView/table.html">Table View</a></div>
+
+        <div id='map'></div>
+        
+<!--
+        <div class="filterIcon shadow-md rounded bg-gray-300" onclick="showFilter()">
+    	   <img src="images/filter.9b86befb.png" />
+        </div>
+-->
+        
+        <div style="display: none;" class="hospitalInfo">
+            <div class="shadow-md rounded bg-red-500 text-white p-1" style="float: right; width:30px; height: 30px; text-align:center; cursor:pointer" onclick="closeHospital()">
+                <span >X</span>
+            </div>
+            <div class="shadow-md rounded bg-gray-500 text-white p-4 mt-8">
+                <div id="institution" class="text-xl"></div>
+                <div id="address" class="mt-1"></div>
+                <div id="landline" class="mt-1">
+                    <a href="" class="underline"></a>
+                </div>
+                <div id="contact" class="mt-1">
+                    <a href="" class="underline"></a>
+                </div>
+            </div>
+            <div class="shadow-md rounded bg-white p-4 mt-2">
+                <table class="bedsInfo">
+                    <tbody>
+                        <tr>
+                            <td style="width:90%">
+                                Oxygen Supported Beds
+                            </td>
+                            <td id="oxygen_supported" class="font-bold"></td>
+                        </tr>
+                        <tr>
+                            <td style="width:90%">
+                                Normal Beds(wihtout oxygen support)
+                            </td>
+                            <td id="non_oxygen_supported" class="font-bold"></td>
+                        </tr>
+                        <tr>
+                            <td style="width:90%">
+                                ICU Beds
+                            </td>
+                            <td id="icu_beds" class="font-bold"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="shadow-md rounded bg-white p-4 mt-2">
+                <div class="font-bold">Last Updated</div>
+                <div id="lastUpdated"></div>
+            </div>
+        </div>
+        
+        <div class="filterBy shadow-md bg-gray-200 p-4 rounded" style="display: none;">
+            <div class="mb-2">Filter By</div>
+            <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                <input type="checkbox" checked name="oxygen_supported" id="oxygen_supported_check" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                <label for="toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+            </div>
+            <label for="toggle" class="text-xs text-gray-700 mb-4">Show Oxygen Supported Beds</label><br/>
+
+            <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                <input type="checkbox" name="non_oxygen_supported" id="non_oxygen_supported_check" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                <label for="toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+            </div>
+            <label for="toggle" class="text-xs text-gray-700 mb-4">Show Normal Beds</label><br/>
+
+            <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                <input type="checkbox" name="icu_beds" id="icu_beds_check" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                <label for="toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+            </div>
+            <label for="toggle" class="text-xs text-gray-700 mb-4">Show ICU Beds</label><br/>
+
+            <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                <input type="checkbox" checked name="show_only_vacant" id="show_only_vacant_check" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                <label for="toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+            </div>
+            <label for="toggle" class="text-xs text-gray-700 mb-4">Show only vacant beds</label><br/>
+
+            <button class="bg-blue-500 p-1 text-white rounded shadow-md mt-2" onclick="callFilter()">Apply</button>
+            <button class="bg-red-500 p-1 text-white rounded shadow-md mt-2 ml-2" onclick="closeFilter()">Close</button>
+        </div>
+                
+        <script type="text/javascript" type="module">
+            mapboxgl.accessToken = 'pk.eyJ1IjoiaW5lZWRhdXRodG9rZW4iLCJhIjoiY2tveWZ1MzN6MHBrcTJ2cWd1MXkwamwzYSJ9.UKt9M5_t_m0OhPcyKDBLBg';
+            var map = new mapboxgl.Map({
+              container: 'map', // container id
+              style: 'mapbox://styles/mapbox/light-v10', // stylesheet location
+              center: [80.27, 13.08], // starting position
+              zoom: 10.5 // starting zoom
+            });
+        </script>
+        
+        <script type="text/javascript" type="module">
+            
+            window.closeHospital = function(){
+                $('.hospitalInfo').hide();
+            }
+            window.showFilter = function(){
+                $('.filterBy').show();
+            }
+            window.closeFilter = function(){
+                $('.filterBy').hide();
+            }
+            window.callFilter = function(){
+                window.filterData.oxygen_supported = $('#oxygen_supported_check').prop('checked')
+                window.filterData.non_oxygen_supported = $('#non_oxygen_supported_check').prop('checked')
+                window.filterData.icu_beds = $('#icu_beds_check').prop('checked')
+                window.filterData.show_only_vacant = $('#show_only_vacant_check').prop('checked')
+                window.showHospitalData();
+                window.closeFilter();
+            }
+            
+             const params = {"searchString":"",
+                            "sortCondition":{"Name":1},
+                             "pageNumber":1,
+                             "pageLimit":2000,
+                             "SortValue":"Availability",
+                             "ShowIfVacantOnly":"",
+                             "IsGovernmentHospital":true,
+                             "IsPrivateHospital":true,
+                             "FacilityTypes":["CHO","CHC","CCC"]
+                            };
+            
+            $.ajax({
+                method:'post',
+                url: 'https://tncovidbeds.tnega.org/api/hospitals',
+                data: JSON.stringify(params),
+                contentType: "application/json",
+                dataType: "json",
+                success: function(data){
+                    window.hospitalData=[];
+                    data.result.forEach((hospital, index)=>{
+                        window.hospitalData.push(hospital)
+                        if(index===(data.result.length-1)){
+                            window.showHospitalData();
+                        }
+                    })
+                }
+            });
+            
+            window.showHospitalData = function(){
+                var tableData = [];
+                var pooraHospitalDetails = {};
+                
+                var vacantBedHospitals = {};
+                vacantBedHospitals.type = "FeatureCollection";
+                var greenStrokeObject = {};
+                greenStrokeObject.fill = "#555555";
+                vacantBedHospitals.style = greenStrokeObject;
+                vacantBedHospitals.className = {"baseVal":"lineGreen"}
+                
+                var allHospitals = {};
+                allHospitals.type = "FeatureCollection";
+                var strokeObject = {};
+                strokeObject.fill = "red";
+                allHospitals.style = strokeObject;
+                allHospitals.className = {"baseVal":"lineRed"}
+                
+                var greenFeatures = [];
+                var features = [];
+                window.hospitalData.forEach((hospital) =>{
+                    if(hospital.Latitude!==undefined && hospital.Latitude!==null && hospital.Longitude!==undefined && hospital.Longitdude!==null){
+                        var newObject = {};
+                        newObject.type = "Feature";
+                        
+                        var propertiesObject = {};
+                        propertiesObject.Name = hospital.Name;
+                        var addressString = "";
+                        if(hospital.AddressDetail!==undefined){
+                            if(hospital.AddressDetail.Line1!==undefined && hospital.AddressDetail.Line1!==null){
+                                addressString = hospital.AddressDetail.Line1;
+                            }
+                            if(hospital.AddressDetail.Line2!==undefined && hospital.AddressDetail.Line2!==null){
+                                addressString = addressString + " - " + hospital.AddressDetail.Line2; 
+                            }
+                            if(hospital.AddressDetail.Line3!==undefined && hospital.AddressDetail.Line3!==null){
+                                addressString = addressString + " - "+  hospital.AddressDetail.Line3;
+                            }
+                            propertiesObject.Address = addressString;
+                            propertiesObject.id = hospital._id;
+                        }
+                        newObject.properties = propertiesObject;
+                        
+                        var geometryObject = {};
+                        geometryObject.type = "Point";
+                        
+                        var coordinateArray = [hospital.Longitude, hospital.Latitude];
+                        geometryObject.coordinates = coordinateArray;
+                        
+                        newObject.geometry = geometryObject;
+                        
+                        if(hospital.CovidBedDetails.TotalVaccantBeds!==undefined && hospital.CovidBedDetails.TotalVaccantBeds!==null && hospital.CovidBedDetails.TotalVaccantBeds>0){
+                            newObject.properties.style = {"color": "green"};
+                            newObject.className = {"baseVal":"lineGreen"};
+                            greenFeatures.push(newObject);
+                        }else{
+                            newObject.properties.style = {"color": "red"};
+                            newObject.className = {"baseVal":"lineRed"};
+                            features.push(newObject);
+                        }
+                    }
+                    vacantBedHospitals.features = greenFeatures;
+                    allHospitals.features = features;
+                    
+                    var id = hospital._id;
+                    pooraHospitalDetails[id]= hospital;
+                    
+                    var newHospital = {};
+                
+                    newHospital.Name = hospital.Name;
+                    if(hospital.AddressDetail!==undefined){
+                        const taluk = hospital.Taluk!==undefined?hospital.Taluk.Name:''
+                        const district = hospital.District!==undefined?hospital.District.Name:''
+                        newHospital.Address = addressString+","+taluk+","+district;
+                        newHospital.Address = newHospital.Address.replace(",,", ",").replace("undefined", "");
+                        
+                        if(newHospital.Address.charAt(0)== ','){
+                            newHospital.Address = newHospital.Address.substr(1, newHospital.Address.length-1    );
+                        }
+                    }
+                    newHospital.contactNumber=hospital.MobileNumber;
+                    newHospital.o2BedsAvailable=hospital.CovidBedDetails.VaccantO2Beds;
+                    newHospital.non02BedsAvailable=hospital.CovidBedDetails.VaccantNonO2Beds;
+                    newHospital.icuBeds=hospital.CovidBedDetails.VaccantICUBeds;
+                    tableData.push(newHospital); 
+                });
+                
+                localStorage.setItem("tableData", JSON.stringify(tableData));
+                 
+                var map = new mapboxgl.Map({
+                  container: 'map', // container id
+                  style: 'mapbox://styles/mapbox/light-v10', // stylesheet location
+                  center: [80.27, 13.08], // starting position
+                  zoom: 10.5 // starting zoom
+                });
+                
+                map.on('load', function(){
+                    map.loadImage(
+                      'https://i.ibb.co/vJDcNFw/plus-16.png',
+                        function(error, image) {
+                        if (error) throw error;
+                        map.addImage('greenPlus', image);
+                    });
+                    
+                    map.loadImage(
+                    'https://i.ibb.co/Ypsb3SZ/plus-8-16.gif',
+                        function(error, image){
+                        if(error) throw error;
+                        map.addImage('redPlus', image);
+                    });
+                    
+                    map.addLayer({
+                        id:'hospitals',
+                        type: 'symbol',
+                        source: {
+                            type: 'geojson',
+                            data: allHospitals
+                        },
+                        layout:{
+                            'icon-image': 'redPlus',
+                            'icon-allow-overlap': true
+                        },
+                        paint: {}
+                    });
+                    map.addLayer({
+                        id:'greenHospitals',
+                        type: 'symbol',
+                        source: {
+                            type: 'geojson',
+                            data: vacantBedHospitals
+                        },
+                        layout:{
+                            'icon-image': 'greenPlus',
+                            'icon-allow-overlap': true
+                        },
+                        paint: {}
+                    });
+                });
+                
+                var popup = new mapboxgl.Popup();
+                map.on('mousemove', function (e) {
+                    var features = map.queryRenderedFeatures(e.point, {
+                        layers: ['hospitals', 'greenHospitals']
+                    });
+                    
+                    if (!features.length) {
+                        popup.remove();
+                        return;
+                    }
+
+                    var feature = features[0];
+                    
+                    popup
+                    .setLngLat(feature.geometry.coordinates)
+                    .setHTML(feature.properties.Name)
+                    .addTo(map);
+
+                    map.getCanvas().style.cursor = features.length ? 'pointer' : '';
+                });
+                
+                map.on('click', function (e) {
+                    var feature;
+                    var clickFeatures = map.queryRenderedFeatures(e.point, {
+                        layers: ['hospitals', 'greenHospitals']
+                    });
+                    
+                    if(!clickFeatures.length){
+                        return;
+                    }
+                    
+                    feature = clickFeatures[0];
+                    console.log("Hospital ID "+ JSON.stringify(feature.properties.id));
+                    openHospitalPage(pooraHospitalDetails[feature.properties.id]);
+                });
+            }
+            
+             const openHospitalPage = function(hospitalData){
+                $('.hospitalInfo').show();
+                $('#institution').text(hospitalData.Name)
+                const taluk = hospitalData.Taluk!==undefined?hospitalData.Taluk.Name:''
+                const district = hospitalData.District!==undefined?hospitalData.District.Name:''
+                $('#address').text(hospitalData.AddressDetail.Line1+','+taluk+','+district)
+                $('#contact a').text(hospitalData.MobileNumber)
+                $('#contact a').attr('href','tel:'+hospitalData.MobileNumber)
+                $('#landline a').text(hospitalData.Landline)
+                $('#landline a').attr('href','tel:'+hospitalData.Landline)
+
+                $('#oxygen_supported').text(hospitalData.CovidBedDetails.VaccantO2Beds+"/"+hospitalData.CovidBedDetails.AllotedO2Beds)
+                $('#non_oxygen_supported').text(hospitalData.CovidBedDetails.VaccantNonO2Beds+"/"+hospitalData.CovidBedDetails.AllotedNonO2Beds)
+                $('#icu_beds').text(hospitalData.CovidBedDetails.VaccantICUBeds+"/"+hospitalData.CovidBedDetails.AllotedICUBeds)
+
+                $('#lastUpdated').text(new Date(hospitalData.UpdatedDateTime*1000))
+                $('#remarks').text(hospitalData.remarks)	
+              }
+             
+        </script>
+    </body>
+</html>
+
+° N, 80.2707° E

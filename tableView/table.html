@@ -1,0 +1,275 @@
+<!-- <!DOCTYPE html>
+<html>
+<head>
+    <title>Tamil Nadu Covid Beds Availability details</title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script type="text/javascript" src="http://rawgit.com/vitmalina/w2ui/master/dist/w2ui.min.js" type="module"></script>
+    <link rel="stylesheet" type="text/css" href="http://rawgit.com/vitmalina/w2ui/master/dist/w2ui.min.css" type="module"/>
+    <script src="fetchHospitals.js" type="text/javascript"></script> 
+    <script type="text/javascript" type="module">
+        window.tableData = [];
+    </script>
+</head>
+<body>
+
+<div id="main" style="width: 100%; height: 400px;"></div>
+<br>
+<label>
+    <input type="checkbox" id="autoLoad" onclick="refreshGrid(this.checked)" checked>
+    Auto Load
+</label>
+
+<script type="text/javascript">
+// widget configuration
+        console.log("Above getTableData");
+        var tableData = window.allTableDetails;
+        console.log("Table Data in index.html "+ tableData);
+        console.log(tableData);
+
+        var config = {
+            grid: {
+                name: 'grid',
+                records : tableData,
+                show: {
+                    footer: true,
+                    toolbar: true,
+                    lineNumbers: true
+                },
+                limit: 50,
+                columns: [
+                    { field: 'Name', caption:  'Hospital Name', size: '300px', searchable: 'text', sortable: 'true'},
+                    { field: 'Address', caption: 'Address', size: '300px'},
+                    { field: 'o2BedsAvailable', caption: 'O2 Beds Available', size: '150px', sortable:'true'},
+                    { field: 'non02BedsAvailable', caption: 'Normal Beds Available', size: '150px', sortable:'true'},
+                    { field: 'icuBeds', caption: 'ICU Beds Available', size: '150px', sortable:'true'},
+                    { field: 'contactNumber', caption: 'Contact Number', size: '200px'}
+                ]
+            }
+        };
+    
+        const params = {"searchString":"",
+            "sortCondition":{"Name":1},
+             "pageNumber":1,
+             "pageLimit":2000,
+             "SortValue":"Availability",
+             "ShowIfVacantOnly":"",
+             "IsGovernmentHospital":true,
+             "IsPrivateHospital":true,
+             "FacilityTypes":["CHO","CHC","CCC"]
+        };
+    
+        /*$.ajax({
+        method:'post',
+        url: 'https://tncovidbeds.tnega.org/api/hospitals',
+        data: JSON.stringify(params),
+        contentType: "application/json",
+        dataType: "json",
+        success: function(data){
+            data.result.forEach((hospital, index)=>{
+                var newHospital = {};
+                
+                newHospital.Name = hospital.Name;
+                if(hospital.AddressDetail!==undefined){
+                    const taluk = hospital.Taluk!==undefined?hospital.Taluk.Name:''
+                    const district = hospital.District!==undefined?hospital.District.Name:''
+                    if(hospital.AddressDetail.Line1!==undefined && hospital.AddressDetail.Line1!==null){
+                        addressString = hospital.AddressDetail.Line1;
+                    }
+                    if(hospital.AddressDetail.Line2!==undefined && hospital.AddressDetail.Line2!==null){
+                        addressString = addressString + " - " + hospital.AddressDetail.Line2; 
+                    }
+                    if(hospital.AddressDetail.Line3!==undefined && hospital.AddressDetail.Line3!==null){
+                        addressString = addressString + " - "+  hospital.AddressDetail.Line3;
+                    }
+                    newHospital.Address = addressString+","+taluk+","+district;
+                }
+                newHospital.contactNumber=hospital.MobileNumber;
+                newHospital.o2BedsAvailable=hospital.VaccantO2Beds;
+                newHospital.non02BedsAvailable=hospital.VaccantNonO2Beds;
+                newHospital.icuBeds=hospital.VaccantICUBeds;
+                tableData.push(newHospital);   
+                });
+            }
+        });*/
+
+        $(function () {
+            $('#main').w2grid(config.grid);
+        });
+    
+    
+        function refreshGrid(auto) {
+            w2ui.grid.autoLoad = auto;
+            w2ui.grid.skip(0);
+        }
+    
+        console.log("Above for each");
+    
+        do{
+            console.log("Table Data "+ tableData);
+            tableData.forEach((data) => {
+                console.log(data);
+            });
+        }while(tableData.length==0);
+    
+</script>
+
+</body>
+</html> -->
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Tamil Nadu Covid Beds Availability details</title>
+        <script src="https://cdn.fancygrid.com/fancy.min.js"></script>
+        <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
+        <style>
+            .title{
+                position: fixed;
+                z-index: 1000;
+                left: 10px;
+                bottom: 10px;
+              }
+        </style>
+    </head>
+    <body>
+        <div class="title shadow-md rounded bg-white p-2">Source <a class="underline text-gray-500" href="https://tncovidbeds.tnega.org/" >https://tncovidbeds.tnega.org</a></div>
+        
+        <div id="container"></div>
+        
+        <script>
+                  
+            var allTabledata = [];
+            allTabledata = JSON.parse(localStorage.getItem("tableData"));
+            document.addEventListener("DOMContentLoaded", function() {
+                new FancyGrid({
+                
+                    title : "Tamil Nadhu Covid Treatment Hospitals Details",
+                    renderTo: 'container',
+                    width: 1900,
+                    height: 100000,
+                    data: data,
+                    tbar:[{
+                        type: 'search',
+                        width: 400,
+                        emptyText: 'Search Hospital / Locality',
+                        paramsMenu: true,
+                        paramsText: 'Parameters'
+                    }],
+                    defaults:{
+                        type: 'string',
+                        width: 250,
+                        editable: false,
+                        sortable: true
+                    },
+                    columns: [{
+                        index: 'Name',
+                        locked: true,
+                        title: 'Hospital Name',
+                        type: 'string',
+                        editable: false,
+                        width: 360
+                    },{
+                        index: 'Address',
+                        locked: true,
+                        title: 'Address',
+                        type: 'string',
+                        editable: false,
+                        width: 460
+                    },{
+                        title: 'Oxygen Beds Available',
+                        locked: true,
+                        index: 'o2BedsAvailable',
+                        type: 'number',
+                        editable: false,
+                        width: 260
+                    },{
+                        title: 'Normal Beds Available (Without O2)',
+                        locked: true,
+                        index: 'non02BedsAvailable',
+                        type: 'number',
+                        editable: false,
+                        width: 260
+                    },{
+                        title: 'ICU Beds Available',
+                        locked: true,
+                        index: 'icuBeds',
+                        type: 'number',
+                        editable: false,
+                        width: 260
+                    },{
+                        title: 'Contact Number',
+                        locked: true,
+                        index: 'contactNumber',
+                        type: 'number',
+                        width: 310
+                    }]
+                });
+            });
+            
+            var data = [];
+            allTabledata.forEach((hospital) =>{
+                data.push(hospital);
+            });
+            
+            
+//            document.addEventListener("DOMContentLoaded", function() {
+//              new FancyGrid({
+//                title: 'Column Types',
+//                renderTo: 'container',
+//                width: 690,
+//                height: 400,
+//                data: data,
+//                tbar: [{
+//                  type: 'search',
+//                  width: 350,
+//                  emptyText: 'Search',
+//                  paramsMenu: true,
+//                  paramsText: 'Parameters'
+//                }],
+//                defaults: {
+//                  type: 'string',
+//                  width: 100,
+//                  editable: true,
+//                  sortable: true
+//                },
+//                clicksToEdit: 1,
+//                columns: [{
+//                  index: 'id',
+//                  locked: true,
+//                  title: 'ID',
+//                  type: 'number',
+//                  editable: false,
+//                  width: 40
+//                }, {
+//                  index: 'company',
+//                  width: 105,
+//                  locked: true,
+//                  title: 'Company'
+//                }, {
+//                  index: 'name',
+//                  title: 'Name'
+//                }, {
+//                  index: 'surname',
+//                  title: 'Sur Name'
+//                }, {
+//                  index: 'country',
+//                  title: 'Country',
+//                  type: 'combo',
+//                  data: ['USA', 'Canada', 'England']
+//                }, {
+//                  index: 'age',
+//                  width: 60,
+//                  title: 'Age',
+//                  type: 'number'
+//                }, {
+//                  index: 'married',
+//                  width: 70,
+//                  title: 'Married',
+//                  type: 'checkbox'
+//                }]
+//              });
+//            });
+
+        </script>
+    </body>
+</html>
